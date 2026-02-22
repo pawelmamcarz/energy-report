@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analiza Kosztow Energetycznych — Jesionowa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; }
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 28px; text-align: center; margin-bottom: 8px; color: #f8fafc; }
+.subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 14px; line-height: 1.6; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+.card-title { font-size: 12px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 8px; }
+.card-value { font-size: 32px; font-weight: 700; }
+.card-detail { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+.green { color: #4ade80; } .blue { color: #60a5fa; } .amber { color: #fbbf24; }
+.red { color: #f87171; } .purple { color: #a78bfa; } .cyan { color: #22d3ee; }
+.chart-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; margin-bottom: 24px; }
+.chart-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid #334155; }
+th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+td:first-child, th:first-child { text-align: left; }
+tr:hover td { background: #334155; }
+.highlight-row td { font-weight: 700; border-top: 2px solid #475569; background: #1a2332; }
+.savings-bar { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.savings-bar .label { min-width: 220px; font-size: 13px; }
+.savings-bar .bar { flex: 1; height: 28px; background: #334155; border-radius: 6px; overflow: hidden; }
+.savings-bar .fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-size: 12px; font-weight: 600; }
+.note { font-size: 12px; color: #64748b; margin-top: 20px; line-height: 1.6; }
+.section-title { font-size: 20px; font-weight: 600; margin: 30px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #334155; }
+.flex-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.flex-row > * { flex: 1; min-width: 300px; }
+.nm-highlight { background: linear-gradient(135deg, #1e293b, #1a2332); border: 1px solid #22c55e33; }
+.nm-badge { display: inline-block; background: #22c55e22; color: #4ade80; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+.src-badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.src-ha { background: #3b82f622; color: #60a5fa; }
+.src-csv { background: #fbbf2422; color: #fbbf24; }
+.src-fs { background: #22c55e22; color: #4ade80; }
+.flow-diagram { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+.flow-box { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; text-align: center; }
+.flow-arrow { color: #4ade80; font-size: 20px; }
+.flow-loss { color: #f87171; font-size: 11px; }
+.version-tag { display: inline-block; background: #3b82f622; color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Analiza Kosztow Energetycznych <span class="version-tag">v4</span></h1>
+  <p class="subtitle">Dom Jesionowa | Mar 2025 - Lut 2026 (12 mies.) | G12w | Magazyn w sieci 80%<br>
+  PV: <span class="src-badge src-fs">Fusion Solar</span> portal (dokladne dane miesieczne) |
+  Siec: <span class="src-badge src-csv">CSV</span> Zamel MEW-02 (mar-sie) + <span class="src-badge src-ha">HA</span> (wrz-lut)</p>
+
+  <!-- Summary cards -->
+  <div class="grid">
+    <div class="card nm-highlight">
+      <div class="card-title">Koszt energii rocznie <span class="nm-badge">z NM 80%</span></div>
+      <div class="card-value amber">~8 747 PLN</div>
+      <div class="card-detail">~729 PLN/mies. (prad + gaz)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Zuzycie ogolem</div>
+      <div class="card-value blue">~30 547 kWh</div>
+      <div class="card-detail">~84 kWh/dzien srednio</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Produkcja PV <span class="src-badge src-fs">Fusion Solar</span></div>
+      <div class="card-value green">~17 086 kWh</div>
+      <div class="card-detail">Pokrycie ~56% zuzycia</div>
+    </div>
+    <div class="card nm-highlight">
+      <div class="card-title">Kredyt magazyn w sieci <span class="nm-badge">NM 80%</span></div>
+      <div class="card-value green">~1 556 PLN</div>
+      <div class="card-detail">3 027 kWh odzyskane (z 3 783 eksportu)</div>
+    </div>
+  </div>
+
+  <!-- Net-metering flow -->
+  <div class="chart-card nm-highlight">
+    <div class="chart-title">Przeplyw energii PV (rocznie)</div>
+    <div class="flow-diagram">
+      <div class="flow-box"><div style="font-size:24px;font-weight:700" class="green">17 086 kWh</div><div style="font-size:12px;color:#94a3b8">Produkcja PV</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-box"><div style="font-size:24px;font-weight:700" class="blue">13 302 kWh</div><div style="font-size:12px;color:#94a3b8">Autokonsumpcja (78%)</div></div>
+      <div style="color:#94a3b8">+</div>
+      <div class="flow-box"><div style="font-size:24px;font-weight:700" class="amber">3 783 kWh</div><div style="font-size:12px;color:#94a3b8">Eksport do sieci (22%)</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-box" style="border-color:#22c55e44"><div style="font-size:24px;font-weight:700" class="green">3 027 kWh</div><div style="font-size:12px;color:#94a3b8">Zwrot 80%</div><div class="flow-loss">-757 kWh strata (20%)</div></div>
+    </div>
+    <div style="text-align:center;margin-top:12px;font-size:14px">Efektywne wykorzystanie PV: <strong class="green">16 329 kWh</strong> z 17 086 kWh = <strong class="green">96%</strong></div>
+  </div>
+
+  <!-- Cost chart + Energy chart -->
+  <div class="section-title">Koszty miesieczne i zuzycie</div>
+  <div class="flex-row">
+    <div class="chart-card">
+      <div class="chart-title">Koszt netto z NM (PLN/mies.)</div>
+      <canvas id="costChart" height="280"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Import vs PV vs Eksport (kWh)</div>
+      <canvas id="energyChart" height="280"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly table -->
+  <div class="chart-card">
+    <div class="chart-title">Szczegoly miesieczne</div>
+    <table>
+      <thead><tr><th>Miesiac</th><th>Import</th><th>Eksport</th><th>PV</th><th>Zuzycie</th><th>HP</th><th>Tesla</th><th>Brutto</th><th>NM kred.</th><th>Netto</th><th>Zrodlo grid</th></tr></thead>
+      <tbody>
+        <tr><td>Mar 25*</td><td>981</td><td>196</td><td>1 494</td><td>2 280</td><td>600</td><td>&mdash;</td><td>550</td><td>-88</td><td class="amber">462</td><td><span class="src-badge src-csv">CSV*</span></td></tr>
+        <tr><td>Kwi 25&#9888;</td><td>204</td><td>553</td><td>2 645</td><td>2 300</td><td>300</td><td>&mdash;</td><td>109</td><td>-235</td><td class="green">-127</td><td><span class="src-badge src-csv">CSV&#9888;</span></td></tr>
+        <tr><td>Maj 25</td><td>451</td><td>753</td><td>2 602</td><td>2 300</td><td>150</td><td>400</td><td>233</td><td>-311</td><td class="green">-78</td><td><span class="src-badge src-csv">CSV</span></td></tr>
+        <tr><td>Cze 25</td><td>169</td><td>911</td><td>2 676</td><td>1 935</td><td>100</td><td>500</td><td>85</td><td>-366</td><td class="green">-281</td><td><span class="src-badge src-csv">CSV</span></td></tr>
+        <tr><td>Lip 25</td><td>253</td><td>821</td><td>2 304</td><td>1 736</td><td>80</td><td>600</td><td>127</td><td>-330</td><td class="green">-203</td><td><span class="src-badge src-csv">CSV</span></td></tr>
+        <tr><td>Sie 25</td><td>135</td><td>415</td><td>2 478</td><td>2 198</td><td>420</td><td>&mdash;</td><td>68</td><td>-167</td><td class="green">-99</td><td><span class="src-badge src-csv">CSV</span></td></tr>
+        <tr><td>Wrz 25</td><td>438</td><td>53</td><td>1 345</td><td>1 581</td><td>119</td><td>828</td><td>233</td><td>-23</td><td>210</td><td><span class="src-badge src-ha">HA</span></td></tr>
+        <tr><td>Paz 25</td><td>1 740</td><td>25</td><td>546</td><td>2 118</td><td>376</td><td>1 311</td><td>975</td><td>-11</td><td>964</td><td><span class="src-badge src-ha">HA</span></td></tr>
+        <tr><td>Lis 25</td><td>2 995</td><td>17</td><td>272</td><td>3 061</td><td>966</td><td>1 769</td><td>1 679</td><td>-8</td><td>1 671</td><td><span class="src-badge src-ha">HA</span></td></tr>
+        <tr><td>Gru 25</td><td>3 391</td><td>10</td><td>154</td><td>3 327</td><td>1 367</td><td>1 304</td><td>1 851</td><td>-4</td><td>1 847</td><td><span class="src-badge src-ha">HA</span></td></tr>
+        <tr><td>Sty 26</td><td>4 798</td><td>11</td><td>190</td><td>4 673</td><td>1 726</td><td>1 636</td><td>2 620</td><td>-5</td><td class="red">2 615</td><td><span class="src-badge src-ha">HA</span></td></tr>
+        <tr><td>Lut 26*</td><td>2 884</td><td>18</td><td>378</td><td>3 038</td><td>1 130</td><td>1 428</td><td>1 575</td><td>-8</td><td>1 567</td><td><span class="src-badge src-ha">HA*</span></td></tr>
+        <tr class="highlight-row"><td>ROCZNE</td><td>18 438</td><td>3 783</td><td>17 086</td><td>30 547</td><td>7 334</td><td>9 777</td><td>10 104</td><td>-1 556</td><td>8 547</td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="note">* Mar 25: dane od 21.03, ekstrapolowane. &#9888; Kwi 25: awaria Zamela (~4 dni danych), grid ekstrapolowany. Lut 26: dane do 22.02.<br>
+    PV: dokladne dane z portalu Fusion Solar. Grid: Zamel CSV (mar-lip), HA (sie-lut). Wartosci w kWh, koszty w PLN.<br>
+    Kwi-Sie: koszty netto ujemne — kredyt NM z letniego eksportu przewyzsza import z sieci.</p>
+  </div>
+
+  <!-- Pie + NM chart -->
+  <div class="section-title">Podzial zuzycia i magazyn w sieci</div>
+  <div class="flex-row">
+    <div class="chart-card">
+      <div class="chart-title">Struktura zuzycia energii (roczne)</div>
+      <canvas id="pieChart" height="250"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Eksport i zwrot z magazynu w sieci (kWh)</div>
+      <canvas id="nmChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <!-- Heat pump section -->
+  <div class="section-title">Pompa ciepla (Panasonic Aquarea)</div>
+  <div class="grid">
+    <div class="card"><div class="card-title">Zuzycie elektryczne HP</div><div class="card-value purple">~7 334 kWh</div><div class="card-detail">~24% calego zuzycia domu</div></div>
+    <div class="card"><div class="card-title">Cieplo wyprodukowane</div><div class="card-value cyan">~16 879 kWh</div><div class="card-detail">Sredni COP roczny: ~2.3</div></div>
+    <div class="card"><div class="card-title">Koszt HP (prad)</div><div class="card-value amber">~4 019 PLN</div><div class="card-detail">~0.24 PLN/kWh ciepla</div></div>
+    <div class="card"><div class="card-title">Oszczednosc vs gaz</div><div class="card-value green">~1 889 PLN</div><div class="card-detail">Gaz kosztowalby ~5 908 PLN</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Pompa ciepla — zuzycie miesieczne (kWh)</div>
+    <canvas id="hpChart" height="220"></canvas>
+  </div>
+
+  <!-- Tesla section -->
+  <div class="section-title">Tesla EV</div>
+  <div class="grid">
+    <div class="card"><div class="card-title">Energia ladowania <span class="src-badge src-ha">TWC meter</span></div><div class="card-value blue">~6 695 kWh</div><div class="card-detail">~22% calego zuzycia domu</div></div>
+    <div class="card"><div class="card-title">Koszt ladowania</div><div class="card-value amber">~3 669 PLN</div><div class="card-detail">~0.55 PLN/kWh srednio</div></div>
+    <div class="card"><div class="card-title">Szacowany przebieg</div><div class="card-value cyan">~37 196 km</div><div class="card-detail">~102 km/dzien</div></div>
+    <div class="card"><div class="card-title">Oszczednosc vs spalinowy</div><div class="card-value green">~13 255 PLN</div><div class="card-detail">vs 7L/100km @ 6.50 PLN/L</div></div>
+  </div>
+
+  <!-- PV savings breakdown -->
+  <div class="section-title">Rozklad oszczednosci PV</div>
+  <div class="chart-card">
+    <div class="savings-bar"><div class="label">Autokonsumpcja (13 302 kWh, 78%)</div><div class="bar"><div class="fill" style="width:82%;background:linear-gradient(90deg,#22c55e,#16a34a)">7 289 PLN</div></div></div>
+    <div class="savings-bar"><div class="label">Magazyn w sieci 80% (3 027 kWh)</div><div class="bar"><div class="fill" style="width:18%;background:linear-gradient(90deg,#60a5fa,#3b82f6)">1 556 PLN</div></div></div>
+    <div class="savings-bar"><div class="label" style="color:#f87171">Strata sieciowa 20% (757 kWh)</div><div class="bar"><div class="fill" style="width:4%;background:linear-gradient(90deg,#f87171,#dc2626)">strata</div></div></div>
+    <div class="savings-bar" style="margin-top:12px;padding-top:10px;border-top:1px solid #475569"><div class="label" style="font-weight:700">Lacznie PV savings</div><div class="bar"><div class="fill" style="width:100%;background:linear-gradient(90deg,#4ade80,#22c55e)">8 845 PLN</div></div></div>
+  </div>
+
+  <!-- Comparison box: without PV vs with PV -->
+  <div class="chart-card">
+    <div class="chart-title">Porownanie: z PV vs bez PV</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px;background:#334155;border-radius:8px;padding:16px;text-align:center;opacity:0.7">
+        <div style="font-size:12px;color:#94a3b8">BEZ PV</div>
+        <div style="font-size:28px;font-weight:700" class="red">~16 939 PLN</div>
+        <div style="font-size:12px;color:#94a3b8">rocznie</div>
+      </div>
+      <div style="flex:0;display:flex;align-items:center;font-size:24px;color:#4ade80">&rarr;</div>
+      <div style="flex:1;min-width:200px;background:#22c55e15;border:1px solid #22c55e44;border-radius:8px;padding:16px;text-align:center">
+        <div style="font-size:12px;color:#94a3b8">Z PV + NM 80%</div>
+        <div style="font-size:28px;font-weight:700" class="green">~8 747 PLN</div>
+        <div style="font-size:12px;color:#94a3b8">rocznie (oszcz. ~8 192 PLN)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total savings -->
+  <div class="section-title">Oszczednosci roczne (lacznie)</div>
+  <div class="chart-card">
+    <div class="savings-bar"><div class="label">EV vs spalinowy</div><div class="bar"><div class="fill" style="width:55%;background:linear-gradient(90deg,#22c55e,#16a34a)">13 255 PLN</div></div></div>
+    <div class="savings-bar"><div class="label">PV (auto + magazyn sieci)</div><div class="bar"><div class="fill" style="width:37%;background:linear-gradient(90deg,#3b82f6,#2563eb)">8 845 PLN</div></div></div>
+    <div class="savings-bar"><div class="label">HP vs pelen gaz</div><div class="bar"><div class="fill" style="width:8%;background:linear-gradient(90deg,#a78bfa,#7c3aed)">1 889 PLN</div></div></div>
+    <div class="savings-bar" style="margin-top:16px;padding-top:12px;border-top:1px solid #475569"><div class="label" style="font-weight:700">RAZEM</div><div class="bar"><div class="fill" style="width:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b)">23 989 PLN</div></div></div>
+  </div>
+
+  <!-- Notes -->
+  <div class="note" style="margin-top:30px;padding:16px;background:#1e293b;border-radius:8px;border:1px solid #334155">
+    <strong>Uwagi metodologiczne (v4):</strong><br><br>
+    &bull; <strong>PV:</strong> Dokladne dane miesieczne z portalu Fusion Solar (Huawei). Sierpien: portal 2 478 kWh (integracja HA zainstalowana w polowie miesiaca, HA rejestrowal tylko 1 435 kWh).<br>
+    &bull; <strong>Grid:</strong> Import/eksport z licznika Zamel MEW-02. CSV (mar-sie 2025, pelne miesiace), HA statistics (wrz 2025 - lut 2026). Sie: CSV pelny miesiac (HA mialo tylko polowe).<br>
+    &bull; <strong>Kwiecien:</strong> Zamel mial awarie (tylko ~4 dni danych z ~30). Dane grid ekstrapolowane &#9888;<br>
+    &bull; <strong>Magazyn w sieci:</strong> 80% eksportu wraca jako darmowy import. 3 783 kWh eksportu &rarr; 3 027 kWh odzyskane (757 kWh strata).<br>
+    &bull; Kwiecien-sierpien: koszt netto ujemny &mdash; kredyt NM przekracza koszt importu z sieci.<br>
+    &bull; Taryfa G12w: peak 0.72 PLN/kWh, offpeak 0.43 PLN/kWh. Podzial peak/offpeak szacunkowy.<br>
+    &bull; Marzec 2025: dane grid od 21.03. Luty 2026: dane do 22.02. Oba ekstrapolowane.<br>
+    &bull; Mar-Lip 2025: brak danych HP/Tesla/zuzycia w HA &mdash; szacunki sezonowe.<br>
+    &bull; COP roczny (2.3) nizszy niz biezacy (3.5+) &mdash; obejmuje letnie CWU i zimowe niskie temp.<br>
+    &bull; Tesla: dane z wbudowanego licznika TWC (sensor.tesla_wall_connector_energia). Riemann sum (energia_2) zawyza o 28-95%! Mar-Lip: szacunki skorygowane wspolczynnikiem TWC. Przebieg ~37k km/rok.<br>
+    &bull; Smart Battery+Heating system uruchomiony 22.02.2026 &mdash; oszczednosci powinny wzrosnac.
+  </div>
+</div>
+
+<script>
+const M = ['Mar*','Kwi⚠','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru','Sty','Lut*'];
+const costNet = [462,-127,-78,-281,-203,-99,210,964,1671,1847,2615,1567];
+const nmCred = [88,235,311,366,330,167,23,11,8,4,5,8];
+const imp = [981,204,451,169,253,135,438,1740,2995,3391,4798,2884];
+const exp = [196,553,753,911,821,415,53,25,17,10,11,18];
+const pv = [1494,2645,2602,2676,2304,2478,1345,546,272,154,190,378];
+const hp_e = [600,300,150,100,80,420,119,376,966,1367,1726,1130];
+const hp_t = [1500,1000,550,400,320,900,240,1183,2039,3014,3257,2475];
+const tesla = [0,0,250,300,350,382,520,673,1035,920,1146,1119];
+
+const gridColor = '#334155';
+const tickColor = '#94a3b8';
+
+new Chart(document.getElementById('costChart'), {
+  type: 'bar', data: { labels: M, datasets: [
+    { label: 'Koszt netto (PLN)', data: costNet, backgroundColor: costNet.map(v => v < 0 ? '#4ade80' : v > 2000 ? '#ef4444' : v > 1500 ? '#f97316' : v > 500 ? '#fbbf24' : '#a3e635'), borderRadius: 6 },
+    { label: 'Kredyt NM (PLN)', data: nmCred, backgroundColor: '#22c55e55', borderRadius: 6 }
+  ]}, options: { responsive: true, plugins: { legend: { labels: { color: tickColor }}},
+    scales: { y: { ticks: { color: tickColor, callback: v => v+' PLN' }, grid: { color: gridColor }}, x: { ticks: { color: tickColor }, grid: { display: false }}}}
+});
+
+new Chart(document.getElementById('energyChart'), {
+  type: 'bar', data: { labels: M, datasets: [
+    { label: 'Import (kWh)', data: imp, backgroundColor: '#f8717188', borderRadius: 6 },
+    { label: 'PV (kWh)', data: pv, backgroundColor: '#4ade8088', borderRadius: 6 },
+    { label: 'Eksport (kWh)', data: exp, backgroundColor: '#fbbf2488', borderRadius: 6 }
+  ]}, options: { responsive: true, plugins: { legend: { labels: { color: tickColor }}},
+    scales: { y: { ticks: { color: tickColor }, grid: { color: gridColor }}, x: { ticks: { color: tickColor }, grid: { display: false }}}}
+});
+
+const domInne = 30547 - 7334 - 6695;
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut', data: { labels: [`Tesla EV (${Math.round(6695/30547*100)}%)`, `Pompa ciepla (${Math.round(7334/30547*100)}%)`, `Dom + inne (${Math.round(domInne/30547*100)}%)`],
+    datasets: [{ data: [6695, 7334, domInne], backgroundColor: ['#60a5fa','#a78bfa','#fbbf24'], borderWidth: 0 }]
+  }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0', padding: 16 }}}}
+});
+
+new Chart(document.getElementById('nmChart'), {
+  type: 'bar', data: { labels: M, datasets: [
+    { label: 'Eksport (kWh)', data: exp, backgroundColor: '#fbbf2488', borderRadius: 6 },
+    { label: 'Zwrot 80% (kWh)', data: exp.map(v => Math.round(v*0.8)), backgroundColor: '#4ade8088', borderRadius: 6 }
+  ]}, options: { responsive: true, plugins: { legend: { labels: { color: tickColor }}},
+    scales: { y: { ticks: { color: tickColor }, grid: { color: gridColor }}, x: { ticks: { color: tickColor, font: { size: 10 }}, grid: { display: false }}}}
+});
+
+new Chart(document.getElementById('hpChart'), {
+  type: 'line', data: { labels: M, datasets: [
+    { label: 'HP elektryczne (kWh)', data: hp_e, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', fill: true, tension: 0.3 },
+    { label: 'HP cieplo (kWh th)', data: hp_t, borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.1)', fill: true, tension: 0.3 }
+  ]}, options: { responsive: true, plugins: { legend: { labels: { color: tickColor }}},
+    scales: { y: { ticks: { color: tickColor }, grid: { color: gridColor }}, x: { ticks: { color: tickColor }, grid: { display: false }}}}
+});
+</script>
+</body>
+</html>
