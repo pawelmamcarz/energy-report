@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kreator Analizy Energetycznej</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; }
+.container { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 28px; text-align: center; margin-bottom: 8px; color: #f8fafc; }
+.subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 14px; }
+.back-link { display: inline-block; color: #94a3b8; text-decoration: none; font-size: 13px; margin-bottom: 20px; }
+.back-link:hover { color: #e2e8f0; }
+
+/* Stepper */
+.stepper { display: flex; justify-content: center; gap: 0; margin-bottom: 32px; position: relative; }
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.step-circle { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border: 2px solid #334155; background: #1e293b; color: #94a3b8; z-index: 1; transition: all 0.3s; }
+.step-item.active .step-circle { border-color: #4ade80; background: #4ade80; color: #0f172a; }
+.step-item.completed .step-circle { border-color: #22c55e; background: #22c55e; color: #0f172a; }
+.step-label { font-size: 11px; color: #64748b; margin-top: 6px; text-align: center; }
+.step-item.active .step-label { color: #4ade80; }
+.step-item.completed .step-label { color: #22c55e; }
+.step-line { position: absolute; top: 18px; left: 50%; width: 100%; height: 2px; background: #334155; z-index: 0; }
+.step-item:last-child .step-line { display: none; }
+.step-item.completed .step-line { background: #22c55e; }
+
+/* Cards & Sections */
+.card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; margin-bottom: 16px; }
+.card-title { font-size: 12px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 8px; }
+.card-value { font-size: 32px; font-weight: 700; }
+.card-detail { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.section-title { font-size: 18px; font-weight: 600; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #334155; }
+.green { color: #4ade80; } .blue { color: #60a5fa; } .amber { color: #fbbf24; }
+.red { color: #f87171; } .purple { color: #a78bfa; } .cyan { color: #22d3ee; }
+
+/* Forms */
+.form-group { margin-bottom: 18px; }
+.form-label { display: block; font-size: 12px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 6px; }
+.form-input, .form-select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-family: inherit; }
+.form-input:focus, .form-select:focus { outline: none; border-color: #4ade80; box-shadow: 0 0 0 2px rgba(74,222,128,0.2); }
+.form-select { cursor: pointer; }
+.form-hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+.form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.form-row > .form-group { flex: 1; min-width: 200px; }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s; }
+.toggle-row:hover { border-color: #475569; }
+.toggle-row.active { border-color: #4ade8066; background: #1e293b; }
+.toggle-info { display: flex; align-items: center; gap: 12px; }
+.toggle-icon { font-size: 24px; }
+.toggle-name { font-weight: 600; font-size: 14px; }
+.toggle-desc { font-size: 12px; color: #94a3b8; }
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #334155; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+.toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #94a3b8; border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: #22c55e; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); background: #fff; }
+.toggle-details { padding: 12px 16px; margin: -10px 0 10px; background: #0f172a; border: 1px solid #334155; border-top: 0; border-radius: 0 0 8px 8px; display: none; }
+.toggle-details.show { display: block; }
+
+/* Buttons */
+.btn-row { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
+.btn { padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
+.btn-primary { background: #4ade80; color: #0f172a; }
+.btn-primary:hover { background: #22c55e; }
+.btn-secondary { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+.btn-secondary:hover { border-color: #94a3b8; color: #e2e8f0; }
+.btn-cta { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 14px 32px; font-size: 16px; }
+.btn-cta:hover { opacity: 0.9; }
+
+/* Wizard steps */
+.wizard-step { display: none; }
+.wizard-step.active { display: block; }
+
+/* Upsell cards */
+.upsell-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; margin-bottom: 16px; border-left: 4px solid #4ade80; }
+.upsell-card.medium { border-left-color: #fbbf24; }
+.upsell-card.low { border-left-color: #64748b; }
+.upsell-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.upsell-icon { font-size: 28px; }
+.upsell-title { font-size: 16px; font-weight: 600; }
+.upsell-body { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+.upsell-savings { text-align: center; min-width: 140px; }
+.upsell-savings-value { font-size: 28px; font-weight: 700; color: #4ade80; }
+.upsell-savings-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+.upsell-details { flex: 1; min-width: 200px; }
+.upsell-desc { font-size: 13px; color: #94a3b8; margin-bottom: 8px; line-height: 1.5; }
+.upsell-roi { display: inline-block; background: #334155; color: #e2e8f0; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+.upsell-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.upsell-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #4ade80, #22c55e); }
+.upsell-cta { display: inline-block; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; font-family: inherit; }
+.upsell-cta:hover { opacity: 0.9; }
+
+/* Summary box */
+.summary-box { background: linear-gradient(135deg, #1e293b, #1a2332); border: 1px solid #22c55e33; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; }
+.summary-total { font-size: 36px; font-weight: 700; color: #4ade80; }
+.summary-label { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+
+/* Savings bar */
+.savings-bar { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.savings-bar .label { min-width: 180px; font-size: 13px; }
+.savings-bar .bar { flex: 1; height: 24px; background: #334155; border-radius: 6px; overflow: hidden; }
+.savings-bar .fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; }
+
+/* Chart */
+.chart-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; margin-bottom: 24px; }
+.chart-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .form-row { flex-direction: column; }
+  .upsell-body { flex-direction: column; }
+  .stepper { gap: 0; }
+  .step-label { font-size: 9px; }
+  .btn-row { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="back-link">&larr; Powrot do dashboardu</a>
+  <h1>Kreator Analizy Energetycznej</h1>
+  <p class="subtitle">Sprawdz potencjal oszczednosci Twojej instalacji</p>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step-item active" data-step="1"><div class="step-line"></div><div class="step-circle">1</div><div class="step-label">Dane</div></div>
+    <div class="step-item" data-step="2"><div class="step-line"></div><div class="step-circle">2</div><div class="step-label">Instalacja</div></div>
+    <div class="step-item" data-step="3"><div class="step-line"></div><div class="step-circle">3</div><div class="step-label">Wyniki</div></div>
+    <div class="step-item" data-step="4"><div class="step-circle">4</div><div class="step-label">Rekomendacje</div></div>
+  </div>
+
+  <!-- STEP 1: Podstawowe dane -->
+  <div class="wizard-step active" id="step1">
+    <div class="card">
+      <div class="section-title">Podstawowe dane</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Miesieczny rachunek za prad (PLN)</label>
+          <input type="number" class="form-input" id="monthlyBill" value="800" min="50" max="5000" step="10">
+          <div class="form-hint">Sredni rachunek miesieczny brutto</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Miesieczne zuzycie (kWh)</label>
+          <input type="number" class="form-input" id="monthlyKwh" value="" min="50" max="10000" step="10" placeholder="auto-szacowanie">
+          <div class="form-hint" id="kwhHint">Zostaw puste — oszacujemy z rachunku</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Taryfa</label>
+          <select class="form-select" id="tariff">
+            <option value="G11">G11 — jednastrefowa</option>
+            <option value="G12">G12 — dwustrefowa (dzien/noc)</option>
+            <option value="G12w" selected>G12w — weekendowa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ogrzewanie</label>
+          <select class="form-select" id="heating">
+            <option value="gaz">Gaz ziemny</option>
+            <option value="prad">Prad (grzejniki elektryczne)</option>
+            <option value="hp">Pompa ciepla (juz mam)</option>
+            <option value="inne">Inne (weglowe, pellet itp.)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Powierzchnia domu (m2)</label>
+        <input type="number" class="form-input" id="houseArea" value="130" min="30" max="500" step="5">
+        <div class="form-hint">Potrzebne do szacowania zapotrzebowania na cieplo</div>
+      </div>
+      <div class="toggle-row" onclick="document.getElementById('hasEV').click()">
+        <div class="toggle-info">
+          <span class="toggle-icon">&#9889;</span>
+          <div><div class="toggle-name">Samochod elektryczny</div><div class="toggle-desc">Czy posiadasz lub planujesz EV?</div></div>
+        </div>
+        <label class="toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="hasEV"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-details" id="evDetailsStep1">
+        <div class="form-group">
+          <label class="form-label">Sredni miesieczny przebieg (km)</label>
+          <input type="number" class="form-input" id="evMonthlyKm" value="1500" min="100" max="10000" step="100">
+        </div>
+      </div>
+    </div>
+    <div class="btn-row"><div></div><button class="btn btn-primary" onclick="goToStep(2)">Dalej &rarr;</button></div>
+  </div>
+
+  <!-- STEP 2: Twoja instalacja -->
+  <div class="wizard-step" id="step2">
+    <div class="card">
+      <div class="section-title">Twoja obecna instalacja</div>
+
+      <!-- PV -->
+      <div class="toggle-row" id="pvToggleRow" onclick="document.getElementById('hasPV').click()">
+        <div class="toggle-info">
+          <span class="toggle-icon">&#9728;&#65039;</span>
+          <div><div class="toggle-name">Panele fotowoltaiczne (PV)</div><div class="toggle-desc">Instalacja solarna na dachu</div></div>
+        </div>
+        <label class="toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="hasPV"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-details" id="pvDetails">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Moc instalacji (kWp)</label>
+            <input type="number" class="form-input" id="pvKwp" value="10" min="1" max="50" step="0.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Roczna produkcja (kWh)</label>
+            <input type="number" class="form-input" id="pvProduction" value="" placeholder="auto: kWp x 1050">
+            <div class="form-hint">Zostaw puste — oszacujemy z mocy</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Net-metering / rozliczenie</label>
+          <select class="form-select" id="netMetering">
+            <option value="nm80">Stary prosument (magazyn 80%)</option>
+            <option value="netbilling">Net-billing (nowy system)</option>
+            <option value="brak">Brak / nie wiem</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Heat Pump -->
+      <div class="toggle-row" onclick="document.getElementById('hasHP').click()">
+        <div class="toggle-info">
+          <span class="toggle-icon">&#127777;&#65039;</span>
+          <div><div class="toggle-name">Pompa ciepla</div><div class="toggle-desc">Ogrzewanie i CWU</div></div>
+        </div>
+        <label class="toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="hasHP"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-details" id="hpDetails">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Typ pompy</label>
+            <select class="form-select" id="hpType">
+              <option value="air">Powietrzna (air-water)</option>
+              <option value="ground">Gruntowa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Szacowany COP</label>
+            <input type="number" class="form-input" id="hpCOP" value="3.0" min="1.5" max="6" step="0.1">
+            <div class="form-hint">Typowo 2.5-3.5 dla powietrznej, 3.5-5.0 dla gruntowej</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Battery -->
+      <div class="toggle-row" onclick="document.getElementById('hasBattery').click()">
+        <div class="toggle-info">
+          <span class="toggle-icon">&#128267;</span>
+          <div><div class="toggle-name">Magazyn energii (bateria)</div><div class="toggle-desc">Domowy magazyn energii</div></div>
+        </div>
+        <label class="toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="hasBattery"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-details" id="batteryDetails">
+        <div class="form-group">
+          <label class="form-label">Pojemnosc (kWh)</label>
+          <input type="number" class="form-input" id="batteryKwh" value="10" min="1" max="200" step="1">
+        </div>
+      </div>
+
+      <!-- Smart Home -->
+      <div class="toggle-row" onclick="document.getElementById('hasSmartHome').click()">
+        <div class="toggle-info">
+          <span class="toggle-icon">&#127968;</span>
+          <div><div class="toggle-name">Smart home / zarzadzanie energia</div><div class="toggle-desc">Automatyzacja, monitoring zuzycia</div></div>
+        </div>
+        <label class="toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="hasSmartHome"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goToStep(1)">&larr; Wstecz</button>
+      <button class="btn btn-primary" onclick="goToStep(3)">Analizuj &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Wyniki -->
+  <div class="wizard-step" id="step3">
+    <div class="card">
+      <div class="section-title">Analiza Twojej instalacji</div>
+      <div class="grid" id="resultsCards"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Porownanie kosztow rocznych (PLN)</div>
+      <canvas id="comparisonChart" height="260"></canvas>
+    </div>
+    <div class="card" id="currentSavingsCard" style="display:none">
+      <div class="section-title">Obecne oszczednosci z Twojej instalacji</div>
+      <div id="currentSavingsBars"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goToStep(2)">&larr; Wstecz</button>
+      <button class="btn btn-primary" onclick="goToStep(4)">Zobacz rekomendacje &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Upsell -->
+  <div class="wizard-step" id="step4">
+    <div class="summary-box" id="totalSavingsBox" style="display:none">
+      <div class="summary-label">Laczny potencjal dodatkowych oszczednosci</div>
+      <div class="summary-total" id="totalPotentialSavings"></div>
+      <div class="summary-label">rocznie</div>
+    </div>
+    <div id="upsellContainer"></div>
+    <div id="noUpsell" style="display:none" class="card" style="text-align:center">
+      <div class="section-title" style="border:none;text-align:center">&#127881; Gratulacje!</div>
+      <p style="color:#94a3b8;font-size:14px">Twoja instalacja jest kompletna. Masz wszystkie kluczowe komponenty systemu energetycznego.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goToStep(3)">&larr; Wstecz</button>
+      <button class="btn btn-cta" onclick="alert('Dziekujemy! Skontaktujemy sie z Toba w celu przygotowania indywidualnej wyceny.')">Zamow bezplatna wycene</button>
+    </div>
+  </div>
+
+</div>
+<script>
+// ============================================================
+// PARAMETERS
+// ============================================================
+const PARAMS = {
+  tariff: {
+    G11:  { rate: 0.95, peak: 0.95, offpeak: 0.95 },
+    G12:  { rate: 0.95, peak: 1.21, offpeak: 0.79 },
+    G12w: { rate: 0.95, peak: 1.21, offpeak: 0.79 }
+  },
+  fixed_monthly: 94,
+  pv: {
+    yield_per_kwp: 1050,
+    self_consumption_no_battery: 0.40,
+    self_consumption_with_battery: 0.70,
+    nm80_return: 0.80,
+    net_billing_export_rate: 0.40,
+    cost_per_kwp: 4000
+  },
+  hp: {
+    default_cop: 3.0,
+    gas_rate: 0.35,
+    electric_heater_rate: 0.95,
+    heat_demand_per_m2: 120,
+    system_cost: 45000
+  },
+  battery: {
+    recommended_kwh: 10,
+    cost_per_kwh: 3500,
+    cycles_per_year: 300,
+    dod: 0.9
+  },
+  ev: {
+    kwh_per_100km: 18,
+    petrol_l_per_100km: 7,
+    petrol_price: 6.50
+  },
+  smart: {
+    savings_pct: 0.07,
+    system_cost: 3000
+  }
+};
+
+// ============================================================
+// STEP NAVIGATION
+// ============================================================
+let currentStep = 1;
+
+function goToStep(n) {
+  if (n < 1 || n > 4) return;
+  
+  // Hide current
+  document.getElementById('step' + currentStep).classList.remove('active');
+  document.querySelectorAll('.step-item').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'completed');
+    if (s < n) el.classList.add('completed');
+    if (s === n) el.classList.add('active');
+  });
+  
+  // Show target
+  currentStep = n;
+  document.getElementById('step' + n).classList.add('active');
+  
+  // Trigger calculations on step 3 and 4
+  if (n === 3) calculateResults();
+  if (n === 4) generateUpsells();
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+// TOGGLE HANDLERS
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+  // EV toggle in step 1
+  document.getElementById('hasEV').addEventListener('change', function() {
+    document.getElementById('evDetailsStep1').classList.toggle('show', this.checked);
+    this.closest('.toggle-row').classList.toggle('active', this.checked);
+  });
+  
+  // PV toggle
+  document.getElementById('hasPV').addEventListener('change', function() {
+    document.getElementById('pvDetails').classList.toggle('show', this.checked);
+    document.getElementById('pvToggleRow').classList.toggle('active', this.checked);
+  });
+  
+  // HP toggle
+  document.getElementById('hasHP').addEventListener('change', function() {
+    document.getElementById('hpDetails').classList.toggle('show', this.checked);
+    this.closest('.toggle-row').classList.toggle('active', this.checked);
+  });
+  
+  // Battery toggle
+  document.getElementById('hasBattery').addEventListener('change', function() {
+    document.getElementById('batteryDetails').classList.toggle('show', this.checked);
+    this.closest('.toggle-row').classList.toggle('active', this.checked);
+  });
+  
+  // Smart home toggle
+  document.getElementById('hasSmartHome').addEventListener('change', function() {
+    this.closest('.toggle-row').classList.toggle('active', this.checked);
+  });
+  
+  // Auto-estimate kWh from bill
+  document.getElementById('monthlyBill').addEventListener('input', function() {
+    const kwhField = document.getElementById('monthlyKwh');
+    if (!kwhField.value || kwhField.dataset.auto === 'true') {
+      const bill = parseFloat(this.value) || 0;
+      const estimated = Math.round(Math.max((bill - PARAMS.fixed_monthly) / 0.95, 0));
+      kwhField.value = estimated;
+      kwhField.dataset.auto = 'true';
+      document.getElementById('kwhHint').textContent = 'Szacowane z rachunku (' + estimated + ' kWh)';
+    }
+  });
+  
+  document.getElementById('monthlyKwh').addEventListener('input', function() {
+    this.dataset.auto = 'false';
+    document.getElementById('kwhHint').textContent = 'Podane recznie';
+  });
+  
+  // Auto-calc PV production
+  document.getElementById('pvKwp').addEventListener('input', function() {
+    const prod = document.getElementById('pvProduction');
+    if (!prod.value || prod.dataset.auto === 'true') {
+      prod.value = Math.round(parseFloat(this.value) * PARAMS.pv.yield_per_kwp);
+      prod.dataset.auto = 'true';
+    }
+  });
+  
+  // Trigger initial estimate
+  document.getElementById('monthlyBill').dispatchEvent(new Event('input'));
+  
+  // Sync heating select with HP toggle
+  document.getElementById('heating').addEventListener('change', function() {
+    if (this.value === 'hp') {
+      document.getElementById('hasHP').checked = true;
+      document.getElementById('hasHP').dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+// ============================================================
+// COLLECT INPUT
+// ============================================================
+function collectInput() {
+  const monthlyKwh = parseFloat(document.getElementById('monthlyKwh').value) || 
+                     Math.round((parseFloat(document.getElementById('monthlyBill').value) - PARAMS.fixed_monthly) / 0.95);
+  const tariffKey = document.getElementById('tariff').value;
+  const tariff = PARAMS.tariff[tariffKey];
+  
+  return {
+    monthlyBill: parseFloat(document.getElementById('monthlyBill').value) || 800,
+    monthlyKwh: monthlyKwh,
+    annualKwh: monthlyKwh * 12,
+    annualCost: parseFloat(document.getElementById('monthlyBill').value) * 12,
+    tariffKey: tariffKey,
+    avgRate: tariff.rate,
+    peakRate: tariff.peak,
+    offpeakRate: tariff.offpeak,
+    heating: document.getElementById('heating').value,
+    houseArea: parseFloat(document.getElementById('houseArea').value) || 130,
+    
+    hasEV: document.getElementById('hasEV').checked,
+    evMonthlyKm: parseFloat(document.getElementById('evMonthlyKm').value) || 1500,
+    
+    hasPV: document.getElementById('hasPV').checked,
+    pvKwp: parseFloat(document.getElementById('pvKwp').value) || 10,
+    pvProduction: parseFloat(document.getElementById('pvProduction').value) || 
+                  (parseFloat(document.getElementById('pvKwp').value) || 10) * PARAMS.pv.yield_per_kwp,
+    netMetering: document.getElementById('netMetering').value || 'brak',
+    
+    hasHP: document.getElementById('hasHP').checked,
+    hpCOP: parseFloat(document.getElementById('hpCOP').value) || 3.0,
+    
+    hasBattery: document.getElementById('hasBattery').checked,
+    batteryKwh: parseFloat(document.getElementById('batteryKwh').value) || 10,
+    
+    hasSmartHome: document.getElementById('hasSmartHome').checked
+  };
+}
+
+// ============================================================
+// FORMAT HELPERS
+// ============================================================
+function fmt(n) { return Math.round(n).toLocaleString('pl-PL'); }
+function fmtK(n) { return fmt(n) + ' PLN'; }
+
+// ============================================================
+// CALCULATE RESULTS (Step 3)
+// ============================================================
+let compChart = null;
+
+function calculateResults() {
+  const inp = collectInput();
+  
+  // Cost without any installation (baseline)
+  const baselineCost = inp.annualKwh * inp.avgRate + PARAMS.fixed_monthly * 12;
+  
+  // Calculate current savings from owned components
+  let currentSavings = [];
+  let totalCurrentSavings = 0;
+  let currentCost = baselineCost;
+  
+  // PV savings
+  if (inp.hasPV) {
+    const selfRatio = inp.hasBattery ? PARAMS.pv.self_consumption_with_battery : PARAMS.pv.self_consumption_no_battery;
+    const selfConsumed = inp.pvProduction * selfRatio;
+    const exported = inp.pvProduction - selfConsumed;
+    let nmSavings = 0;
+    if (inp.netMetering === 'nm80') nmSavings = exported * PARAMS.pv.nm80_return * inp.avgRate;
+    else if (inp.netMetering === 'netbilling') nmSavings = exported * PARAMS.pv.net_billing_export_rate;
+    const pvSav = selfConsumed * inp.avgRate + nmSavings;
+    currentSavings.push({ name: 'Panele PV', savings: pvSav, color: '#4ade80' });
+    totalCurrentSavings += pvSav;
+  }
+  
+  // HP savings
+  if (inp.hasHP && inp.heating !== 'hp') {
+    // They have HP but selected different heating — ignore this edge case
+  }
+  if (inp.hasHP) {
+    const heatDemand = inp.houseArea * PARAMS.hp.heat_demand_per_m2;
+    const hpElectric = heatDemand / inp.hpCOP;
+    const hpCost = hpElectric * inp.avgRate;
+    const gasCost = heatDemand * PARAMS.hp.gas_rate;
+    const hpSav = Math.max(gasCost - hpCost, 0);
+    if (hpSav > 0) {
+      currentSavings.push({ name: 'Pompa ciepla (vs gaz)', savings: hpSav, color: '#a78bfa' });
+      totalCurrentSavings += hpSav;
+    }
+  }
+  
+  // EV savings
+  if (inp.hasEV) {
+    const annualKm = inp.evMonthlyKm * 12;
+    const petrolCost = annualKm * PARAMS.ev.petrol_l_per_100km / 100 * PARAMS.ev.petrol_price;
+    const evCost = annualKm * PARAMS.ev.kwh_per_100km / 100 * inp.avgRate;
+    const evSav = petrolCost - evCost;
+    if (evSav > 0) {
+      currentSavings.push({ name: 'Samochod EV (vs paliwo)', savings: evSav, color: '#60a5fa' });
+      totalCurrentSavings += evSav;
+    }
+  }
+  
+  // Battery savings
+  if (inp.hasBattery && (inp.tariffKey === 'G12' || inp.tariffKey === 'G12w')) {
+    const dailyShift = inp.batteryKwh * PARAMS.battery.dod;
+    const batSav = dailyShift * PARAMS.battery.cycles_per_year * (inp.peakRate - inp.offpeakRate);
+    currentSavings.push({ name: 'Magazyn energii', savings: batSav, color: '#fbbf24' });
+    totalCurrentSavings += batSav;
+  }
+  
+  // Smart home savings
+  if (inp.hasSmartHome) {
+    const smartSav = inp.annualKwh * inp.avgRate * PARAMS.smart.savings_pct;
+    currentSavings.push({ name: 'Smart home', savings: smartSav, color: '#22d3ee' });
+    totalCurrentSavings += smartSav;
+  }
+  
+  currentCost = baselineCost - totalCurrentSavings;
+  
+  // Render summary cards
+  const cardsHtml = `
+    <div class="card"><div class="card-title">Roczne zuzycie</div><div class="card-value blue">${fmt(inp.annualKwh)} kWh</div><div class="card-detail">${fmt(inp.monthlyKwh)} kWh/mies.</div></div>
+    <div class="card"><div class="card-title">Koszt bez instalacji</div><div class="card-value red">${fmtK(baselineCost)}</div><div class="card-detail">${fmtK(Math.round(baselineCost/12))}/mies.</div></div>
+    <div class="card"><div class="card-title">Twoj obecny koszt</div><div class="card-value amber">${fmtK(Math.round(currentCost))}</div><div class="card-detail">${fmtK(Math.round(currentCost/12))}/mies.</div></div>
+    <div class="card" style="border-color:#22c55e44"><div class="card-title">Obecne oszczednosci</div><div class="card-value green">${fmtK(Math.round(totalCurrentSavings))}</div><div class="card-detail">rocznie dzieki Twojej instalacji</div></div>
+  `;
+  document.getElementById('resultsCards').innerHTML = cardsHtml;
+  
+  // Render savings bars
+  const savingsCard = document.getElementById('currentSavingsCard');
+  const barsContainer = document.getElementById('currentSavingsBars');
+  if (currentSavings.length > 0) {
+    savingsCard.style.display = 'block';
+    const maxSav = Math.max(...currentSavings.map(s => s.savings));
+    let barsHtml = '';
+    currentSavings.forEach(s => {
+      const pct = Math.round(s.savings / maxSav * 100);
+      barsHtml += `<div class="savings-bar"><div class="label">${s.name}</div><div class="bar"><div class="fill" style="width:${pct}%;background:${s.color}">${fmtK(Math.round(s.savings))}</div></div></div>`;
+    });
+    barsContainer.innerHTML = barsHtml;
+  } else {
+    savingsCard.style.display = 'none';
+  }
+  
+  // Chart
+  const ctx = document.getElementById('comparisonChart').getContext('2d');
+  if (compChart) compChart.destroy();
+  compChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Bez instalacji', 'Z Twoja instalacja'],
+      datasets: [{
+        label: 'Koszt roczny (PLN)',
+        data: [Math.round(baselineCost), Math.round(currentCost)],
+        backgroundColor: ['#f8717188', '#4ade8088'],
+        borderColor: ['#f87171', '#4ade80'],
+        borderWidth: 2,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString('pl-PL') + ' PLN' } }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: v => v.toLocaleString('pl-PL') } },
+        x: { grid: { display: false }, ticks: { color: '#e2e8f0' } }
+      }
+    }
+  });
+}
+
+// ============================================================
+// GENERATE UPSELLS (Step 4)
+// ============================================================
+function generateUpsells() {
+  const inp = collectInput();
+  const recommendations = [];
+  
+  const baselineCost = inp.annualKwh * inp.avgRate + PARAMS.fixed_monthly * 12;
+  
+  // --- PV Upsell ---
+  if (!inp.hasPV) {
+    const recKwp = Math.min(Math.round(inp.annualKwh * 0.8 / PARAMS.pv.yield_per_kwp * 2) / 2, 50);
+    const production = recKwp * PARAMS.pv.yield_per_kwp;
+    const selfRatio = inp.hasBattery ? PARAMS.pv.self_consumption_with_battery : PARAMS.pv.self_consumption_no_battery;
+    const selfConsumed = production * selfRatio;
+    const exported = production - selfConsumed;
+    let nmSavings = 0;
+    let nmDesc = '';
+    // Default to nm80 for new installations
+    nmSavings = exported * PARAMS.pv.nm80_return * inp.avgRate;
+    nmDesc = 'z magazynem w sieci 80%';
+    
+    const directSavings = selfConsumed * inp.avgRate;
+    const totalSavings = directSavings + nmSavings;
+    const investment = recKwp * PARAMS.pv.cost_per_kwp;
+    const roi = totalSavings > 0 ? investment / totalSavings : 99;
+    
+    recommendations.push({
+      id: 'pv',
+      icon: '☀️',
+      title: 'Instalacja fotowoltaiczna',
+      desc: `Rekomendowana moc: ${recKwp} kWp (${fmt(production)} kWh/rok). Autokonsumpcja ${Math.round(selfRatio*100)}% + ${nmDesc}. Pokryje ok. ${Math.round(production/inp.annualKwh*100)}% Twojego zuzycia.`,
+      savingsAnnual: totalSavings,
+      investment: investment,
+      roi: roi,
+      priority: totalSavings > 5000 ? 'high' : 'medium'
+    });
+  }
+  
+  // --- Heat Pump Upsell ---
+  if (!inp.hasHP && (inp.heating === 'gaz' || inp.heating === 'prad' || inp.heating === 'inne')) {
+    const heatDemand = inp.houseArea * PARAMS.hp.heat_demand_per_m2;
+    let currentHeatingCost;
+    let vsLabel;
+    if (inp.heating === 'gaz') {
+      currentHeatingCost = heatDemand * PARAMS.hp.gas_rate;
+      vsLabel = 'gaz';
+    } else if (inp.heating === 'prad') {
+      currentHeatingCost = heatDemand * PARAMS.hp.electric_heater_rate;
+      vsLabel = 'grzejniki elektryczne';
+    } else {
+      currentHeatingCost = heatDemand * 0.30; // pellet/wegiel estimate
+      vsLabel = 'obecne ogrzewanie';
+    }
+    
+    const hpCOP = PARAMS.hp.default_cop;
+    const hpElectric = heatDemand / hpCOP;
+    let hpCost;
+    if (inp.tariffKey === 'G12' || inp.tariffKey === 'G12w') {
+      hpCost = hpElectric * (0.7 * inp.offpeakRate + 0.3 * inp.peakRate);
+    } else {
+      hpCost = hpElectric * inp.avgRate;
+    }
+    
+    const savings = currentHeatingCost - hpCost;
+    
+    if (savings > 200) {
+      const investment = PARAMS.hp.system_cost;
+      recommendations.push({
+        id: 'hp',
+        icon: '🌡️',
+        title: 'Pompa ciepla',
+        desc: `Zapotrzebowanie cieplne: ~${fmt(heatDemand)} kWh/rok (${inp.houseArea} m²). Nowoczesna pompa powietrzna z COP ${hpCOP} zuzyje ~${fmt(hpElectric)} kWh pradu vs ${vsLabel}: ${fmtK(Math.round(currentHeatingCost))}/rok.`,
+        savingsAnnual: savings,
+        investment: investment,
+        roi: investment / savings,
+        priority: savings > 3000 ? 'high' : 'medium'
+      });
+    }
+  }
+  
+  // --- Battery Upsell ---
+  if (!inp.hasBattery) {
+    const recKwh = PARAMS.battery.recommended_kwh;
+    let savings = 0;
+    let desc = '';
+    
+    if (inp.tariffKey === 'G12' || inp.tariffKey === 'G12w') {
+      const dailyShift = recKwh * PARAMS.battery.dod;
+      const arbitrageSavings = dailyShift * PARAMS.battery.cycles_per_year * (inp.peakRate - inp.offpeakRate);
+      savings = arbitrageSavings;
+      desc = `Bateria ${recKwh} kWh pozwoli przesunac zuzycie z taryfy szczytowej (${inp.peakRate} PLN) na pozaszczytowa (${inp.offpeakRate} PLN).`;
+    }
+    
+    if (inp.hasPV) {
+      const pvBonus = Math.min(inp.pvProduction * 0.15, recKwh * 200) * inp.avgRate * 0.3;
+      savings += pvBonus;
+      desc += ` Zwiekszona autokonsumpcja PV o dodatkowe ${fmt(pvBonus / inp.avgRate)} kWh/rok.`;
+    }
+    
+    if (inp.tariffKey === 'G11' && !inp.hasPV) {
+      desc = `Przy taryfie G11 bez PV, bateria domowa ma ograniczone zastosowanie. Rozważ najpierw PV lub zmiane taryfy na G12w.`;
+      savings = 0;
+    }
+    
+    if (savings > 100) {
+      const investment = recKwh * PARAMS.battery.cost_per_kwh;
+      recommendations.push({
+        id: 'battery',
+        icon: '🔋',
+        title: 'Magazyn energii',
+        desc: desc,
+        savingsAnnual: savings,
+        investment: investment,
+        roi: investment / savings,
+        priority: savings > 1500 ? 'medium' : 'low'
+      });
+    }
+  }
+  
+  // --- EV Upsell (informational) ---
+  if (!inp.hasEV) {
+    const defaultKm = 15000;
+    const petrolCost = defaultKm * PARAMS.ev.petrol_l_per_100km / 100 * PARAMS.ev.petrol_price;
+    const evCost = defaultKm * PARAMS.ev.kwh_per_100km / 100 * inp.avgRate;
+    const savings = petrolCost - evCost;
+    
+    recommendations.push({
+      id: 'ev',
+      icon: '⚡',
+      title: 'Samochod elektryczny',
+      desc: `Przy 15 000 km/rok: paliwo ${fmtK(Math.round(petrolCost))} vs ladowanie ${fmtK(Math.round(evCost))}. Oszczednosc rosnie z przebiegiem. Z PV — ladowanie prawie za darmo latem.`,
+      savingsAnnual: savings,
+      investment: 0,
+      roi: 0,
+      priority: savings > 3000 ? 'medium' : 'low'
+    });
+  }
+  
+  // --- Smart Home Upsell ---
+  if (!inp.hasSmartHome) {
+    const savings = inp.annualKwh * inp.avgRate * PARAMS.smart.savings_pct;
+    const investment = PARAMS.smart.system_cost;
+    
+    recommendations.push({
+      id: 'smart',
+      icon: '🏠',
+      title: 'Smart home — zarzadzanie energia',
+      desc: `Automatyczne sterowanie ogrzewaniem, oswietleniem i urzadzeniami. Redukcja zuzycia o ~7% dzieki inteligentnym harmonogramom i monitoringowi.`,
+      savingsAnnual: savings,
+      investment: investment,
+      roi: investment / savings,
+      priority: 'low'
+    });
+  }
+  
+  // --- Prioritize and sort ---
+  recommendations.forEach(r => {
+    r.score = r.savingsAnnual;
+    if (r.roi > 0 && r.roi < 5) r.score *= 1.3;
+    else if (r.roi >= 5 && r.roi < 8) r.score *= 1.0;
+    else if (r.roi >= 8 && r.roi < 12) r.score *= 0.8;
+    else if (r.roi >= 12) r.score *= 0.5;
+    if (r.id === 'pv') r.score *= 1.2;
+    if (r.id === 'battery' && !inp.hasPV) r.score *= 0.5;
+  });
+  recommendations.sort((a, b) => b.score - a.score);
+  
+  // --- Render ---
+  const container = document.getElementById('upsellContainer');
+  const noUpsell = document.getElementById('noUpsell');
+  const totalBox = document.getElementById('totalSavingsBox');
+  
+  const actionable = recommendations.filter(r => r.savingsAnnual > 100);
+  
+  if (actionable.length === 0) {
+    container.innerHTML = '';
+    noUpsell.style.display = 'block';
+    totalBox.style.display = 'none';
+    return;
+  }
+  
+  noUpsell.style.display = 'none';
+  const totalPotential = actionable.reduce((sum, r) => sum + r.savingsAnnual, 0);
+  totalBox.style.display = 'block';
+  document.getElementById('totalPotentialSavings').textContent = fmtK(Math.round(totalPotential));
+  
+  const maxSav = Math.max(...actionable.map(r => r.savingsAnnual));
+  
+  let html = '';
+  actionable.forEach(rec => {
+    const pct = Math.round(rec.savingsAnnual / maxSav * 100);
+    const priorityClass = rec.priority === 'high' ? '' : (rec.priority === 'medium' ? 'medium' : 'low');
+    const roiText = rec.roi > 0 ? `Zwrot inwestycji: ~${rec.roi.toFixed(1)} lat` : 'Porownanie kosztow eksploatacji';
+    const investText = rec.investment > 0 ? `Szacowany koszt: ~${fmtK(rec.investment)}` : '';
+    
+    html += `
+      <div class="upsell-card ${priorityClass}">
+        <div class="upsell-header">
+          <span class="upsell-icon">${rec.icon}</span>
+          <span class="upsell-title">${rec.title}</span>
+        </div>
+        <div class="upsell-body">
+          <div class="upsell-savings">
+            <div class="upsell-savings-value">${fmtK(Math.round(rec.savingsAnnual))}</div>
+            <div class="upsell-savings-label">oszczednosci / rok</div>
+          </div>
+          <div class="upsell-details">
+            <div class="upsell-desc">${rec.desc}</div>
+            <span class="upsell-roi">${roiText}</span>
+            ${investText ? '<span class="upsell-roi" style="margin-left:8px">' + investText + '</span>' : ''}
+            <div class="upsell-bar"><div class="upsell-bar-fill" style="width:${pct}%"></div></div>
+            <button class="upsell-cta" onclick="alert('Dziekujemy za zainteresowanie: ${rec.title}! Przygotujemy indywidualna wycene.')">Zamow wycene</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+</script>
+</body>
+</html>
